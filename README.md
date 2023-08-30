@@ -5,6 +5,79 @@ master:[![pipeline status](https://gitlab.com/MatrixAI/open-source/js-events/bad
 
 Events for push-flow abstractions.
 
+### `AbstractEvent`
+
+```ts
+// For when you just want a regular event without `detail`
+// Note that the `detail` type is `null`
+class Event1 extends AbstractEvent {}
+
+// For when you want a event with `detail`
+class Event2 extends AbstractEvent<string> {}
+
+// Allow caller to customise the `detail` type
+// Note that the `detail` type is `unknown`
+// This would be rare to use, prefer `Event4`
+class Event3<T> extends AbstractEvent<T> {}
+
+// Allow caller to customise the `detail` type
+// But this is more accurate as not passing anything
+// Would mean the `detail` is in fact `null`
+class Event4<T = null> extends AbstractEvent<T> {}
+
+// When you need to customise the constructor signature
+class Event5 extends AbstractEvent<string> {
+  constructor(options: CustomEventInit<string>) {
+    // Make sure you pass `arguments`!
+    super(Event5.name, options, arguments);
+  }
+}
+```
+
+When redispatching an event, you must call `event.clone()`. The same instance cannot be redispatched. When the event is cloned, all constructor parameters are shallow-copied.
+
+### `Evented`
+
+We combine `Evented` with `AbstractEvent` to gain type-safety and convenience of the wildcard any handler.
+
+```ts
+class EventCustom extends AbstractEvent {}
+
+interface X extends Evented {}
+@Evented()
+class X {}
+
+const x = new X();
+
+// Handle specific event, use the `name` property as the key
+x.addEventListener(EventCustom.name, (e) => {
+  console.log(e as EventCustom);
+});
+
+// Handle any event
+x.addEventListener((e) => {
+  // This is the wrapped underlying event
+  console.log((e as EventAny).detail);
+})
+```
+
+Note that all events pass through the any event handler, it is not a "fall through" handler.
+
+You can use this style to handle relevant events to perform side-effects, as well as propagate upwards irrelevant events.
+
+Note that some side-effects you perform may trigger an infinite loop by causing something to emit the specific event type that you are handling. In these cases you should specialise handling of those events with a `once: true`  option, so that they are only handled once.
+
+```ts
+x.addEventListener(EventInfinite.name, (e) => {
+  console.log(e as EventInfinite);
+  performActionThatMayTriggerEventInfinite();
+}, { once: true });
+```
+
+This will terminate the infinite loop on the first time it gets handled.
+
+Therefore it is a good idea to always be as specific with your event types as possible.
+
 ## Installation
 
 ```sh
