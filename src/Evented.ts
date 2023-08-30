@@ -11,7 +11,6 @@ interface Evented {
     callback: EventListenerOrEventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
   ): void;
-  dispatchEvent(event: Event): boolean;
   removeEventListener(
     callback: EventListenerOrEventListenerObject | null,
     options?: EventListenerOptions | boolean,
@@ -21,6 +20,7 @@ interface Evented {
     callback: EventListenerOrEventListenerObject | null,
     options?: EventListenerOptions | boolean,
   ): void;
+  dispatchEvent(event: Event): boolean;
 }
 
 function Evented() {
