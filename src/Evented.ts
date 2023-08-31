@@ -1,19 +1,19 @@
-import EventAny from './EventAny';
-import { _eventTarget, eventTarget } from './utils';
+import EventAll from './EventAll';
+import EventDefault from './EventDefault';
+import {
+  _eventTarget,
+  eventTarget,
+  _eventHandlers,
+  eventHandlers,
+  _eventHandled,
+  eventHandled,
+} from './utils';
 
 interface Evented {
-  addEventListener(
-    callback: EventListenerOrEventListenerObject | null,
-    options?: AddEventListenerOptions | boolean,
-  ): void;
   addEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
     options?: AddEventListenerOptions | boolean,
-  ): void;
-  removeEventListener(
-    callback: EventListenerOrEventListenerObject | null,
-    options?: EventListenerOptions | boolean,
   ): void;
   removeEventListener(
     type: string,
@@ -33,64 +33,90 @@ function Evented() {
   ) => {
     const constructor_ = class extends constructor {
       public [_eventTarget]: EventTarget = new EventTarget();
+      public [_eventHandlers]: WeakMap<
+        EventListenerOrEventListenerObject,
+        EventListener
+      > = new WeakMap();
+      public [_eventHandled]: WeakSet<Event> = new WeakSet();
 
       public get [eventTarget](): EventTarget {
         return this[_eventTarget];
       }
 
+      public get [eventHandlers](): WeakMap<
+        EventListenerOrEventListenerObject,
+        EventListener
+      > {
+        return this[_eventHandlers];
+      }
+
+      public get [eventHandled](): WeakSet<Event> {
+        return this[_eventHandled];
+      }
+
       public addEventListener(
-        type: string | EventListenerOrEventListenerObject | null,
-        callback?:
-          | EventListenerOrEventListenerObject
-          | null
-          | AddEventListenerOptions
-          | boolean,
+        type: string,
+        callback: EventListenerOrEventListenerObject | null,
         options?: AddEventListenerOptions | boolean,
       ) {
-        if (typeof type === 'string') {
-          this[_eventTarget].addEventListener(
-            type,
-            callback as EventListenerOrEventListenerObject,
-            options,
-          );
+        let handler: EventListenerOrEventListenerObject | null;
+        const that = this;
+        if (typeof callback === 'function') {
+          handler = function (e) {
+            // Propagate the `this`
+            const result = callback.call(this, e);
+            that[_eventHandled].add(e);
+            return result;
+          };
+          this[_eventHandlers].set(callback, handler);
+        } else if (
+          callback != null &&
+          typeof callback === 'object' &&
+          typeof callback.handleEvent === 'function'
+        ) {
+          handler = function (e) {
+            // Don't propagate the `this`
+            const result = callback.handleEvent(e);
+            that[_eventHandled].add(e);
+            return result;
+          };
+          this[_eventHandlers].set(callback, handler);
         } else {
-          this[_eventTarget].addEventListener(
-            EventAny.type,
-            type as EventListenerOrEventListenerObject,
-            options,
-          );
+          handler = callback;
         }
+        this[_eventTarget].addEventListener(type, handler, options);
       }
 
       public removeEventListener(
-        type: string | EventListenerOrEventListenerObject | null,
-        callback?:
-          | EventListenerOrEventListenerObject
-          | null
-          | EventListenerOptions
-          | boolean,
+        type: string,
+        callback: EventListenerOrEventListenerObject | null,
         options?: EventListenerOptions | boolean,
       ) {
-        if (typeof type === 'string') {
-          this[_eventTarget].removeEventListener(
-            type,
-            callback as EventListenerOrEventListenerObject,
-            options,
-          );
+        let handler: EventListenerOrEventListenerObject | null;
+        if (callback != null) {
+          // It should exist as long the type is correct
+          handler = this[_eventHandlers].get(callback)!;
         } else {
-          this[_eventTarget].removeEventListener(
-            EventAny.type,
-            type as EventListenerOrEventListenerObject,
-            options,
-          );
+          handler = callback;
         }
+        this[_eventTarget].removeEventListener(type, handler, options);
       }
 
       public dispatchEvent(event: Event) {
-        const status = this[_eventTarget].dispatchEvent(event);
+        let status = this[_eventTarget].dispatchEvent(event);
+        if (status && !this[_eventHandled].has(event)) {
+          status = this[_eventTarget].dispatchEvent(
+            new EventDefault({
+              bubbles: event.bubbles,
+              cancelable: event.cancelable,
+              composed: event.composed,
+              detail: event,
+            }),
+          );
+        }
         if (status) {
-          this[_eventTarget].dispatchEvent(
-            new EventAny({
+          status = this[_eventTarget].dispatchEvent(
+            new EventAll({
               bubbles: event.bubbles,
               cancelable: event.cancelable,
               composed: event.composed,
