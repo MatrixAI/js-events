@@ -54,14 +54,18 @@ x.addEventListener(EventCustom.name, (e) => {
   console.log(e as EventCustom);
 });
 
-// Handle any event
-x.addEventListener((e) => {
+// Handle unhandled events
+x.addEventListener(EventDefault.name, (e) => {
+  // This is the wrapped underlying event
+  console.log((e as EventDefault).detail);
+})
+
+// Handle all events
+x.addEventListener(EventAll.name, (e) => {
   // This is the wrapped underlying event
   console.log((e as EventAny).detail);
 })
 ```
-
-Note that all events pass through the any event handler, it is not a "fall through" handler.
 
 You can use this style to handle relevant events to perform side-effects, as well as propagate upwards irrelevant events.
 
