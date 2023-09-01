@@ -210,14 +210,25 @@ describe('index', () => {
     class Y {
       public readonly isXEncapsulated: boolean;
       protected x: X;
-      protected handleEventXError = (e: EventXError) => {
-        // Whether injected or encapsulated, it must be handled.
-        void this.stop();
-        if (this.isXEncapsulated) {
-          // Only redispatch if it is encapsulated.
+      protected handleEventXError = async (evt: EventXError) => {
+        try {
+          // Transition Y to errored state...
+          if (this.isXEncapsulated) {
+            // Only redispatch if it is encapsulated.
+            this.dispatchEvent(
+              new EventYError({
+                detail: evt,
+              }),
+            );
+          }
+          // Transition Y to stopped state
+          // Whether injected or encapsulated, it must be handled
+          await this.stop();
+        } catch (err) {
+          // Unexpected error is also dispatched
           this.dispatchEvent(
             new EventYError({
-              detail: e,
+              detail: err,
             }),
           );
         }
@@ -255,11 +266,10 @@ describe('index', () => {
         // Detach event handlers at the beginning
         this.x.removeEventListener(EventDefault.name, this.handleEventX);
         this.x.removeEventListener(EventXError.name, this.handleEventXError);
-
         if (this.isXEncapsulated) {
           await this.x.stop();
         }
-        // Imagine this causes an infinite loop
+        // Imagine a bad event suddenly occurred!
         this.x.doSomethingBad();
         this.dispatchEvent(new EventYStop());
       }
@@ -279,6 +289,7 @@ describe('index', () => {
       y1EventAllListenerMock((e as EventAll).detail);
     });
     await y1.start();
+    // Imagine a bad event suddenly occurred!
     y1.doSomethingBad();
 
     // Note that the handling of `EventXError` results in stopping `Y`.
@@ -292,18 +303,10 @@ describe('index', () => {
     // Similarly `X` also does not stop in relation to `EventXError`.
     // It is therefore `Y` responsibility to stop `X` when handling the error.
 
-    // Additionally the order of the events is not guaranteed.
-    // It depends on what exactly happens during handling.
-    // One should consider that the `EventYError` and `EventYStop` are mutually
-    // independent events, that indicate different things.
-    // This is why we sleep for 0 in order to ensure that all events have been handled.
-
     await testsUtils.sleep(0);
     expect(y1EventAllListenerMock).toHaveBeenCalledTimes(2);
-    const calls = y1EventAllListenerMock.mock.calls.map((call) => call[0]);
-    const hasEventYError = calls.some((arg) => arg instanceof EventYError);
-    const hasEventYStop = calls.some((arg) => arg instanceof EventYStop);
-    expect(hasEventYError && hasEventYStop).toBe(true);
+    expect(y1EventAllListenerMock.mock.calls[0][0]).toBeInstanceOf(EventYError);
+    expect(y1EventAllListenerMock.mock.calls[1][0]).toBeInstanceOf(EventYStop);
 
     // In this case, this demonstrates an irrelevant event that is just being
     // re-emitted, which only happens because `X` is still encapsulated by `Y`.
@@ -372,14 +375,25 @@ describe('index', () => {
     class Y {
       public readonly isXEncapsulated: boolean;
       protected x: X;
-      protected handleEventXError = (e: EventXError) => {
-        // Whether injected or encapsulated, it must be handled.
-        void this.stop();
-        if (this.isXEncapsulated) {
-          // Only redispatch if it is encapsulated.
+      protected handleEventXError = async (evt: EventXError) => {
+        try {
+          // Transition Y to errored state...
+          if (this.isXEncapsulated) {
+            // Only redispatch if it is encapsulated.
+            this.dispatchEvent(
+              new EventYError({
+                detail: evt,
+              }),
+            );
+          }
+          // Transition Y to stopped state
+          // Whether injected or encapsulated, it must be handled
+          await this.stop();
+        } catch (err) {
+          // Unexpected error is also dispatched
           this.dispatchEvent(
             new EventYError({
-              detail: e,
+              detail: err,
             }),
           );
         }
@@ -417,11 +431,10 @@ describe('index', () => {
         // Detach event handlers at the beginning
         this.x.removeEventListener(EventDefault.name, this.handleEventX);
         this.x.removeEventListener(EventXError.name, this.handleEventXError);
-
         if (this.isXEncapsulated) {
           await this.x.stop();
         }
-        // Imagine this causes an infinite loop
+        // Imagine a bad event suddenly occurred!
         this.x.doSomethingBad();
         this.dispatchEvent(new EventYStop());
       }
@@ -442,6 +455,7 @@ describe('index', () => {
       yEventAllListenerMock((e as EventAll).detail);
     });
     await y.start();
+    // Imagine a bad event suddenly occurred!
     y.doSomethingBad();
 
     // When injecting, we never re-dispatch events, we will however handle them.
