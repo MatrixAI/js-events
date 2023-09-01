@@ -214,21 +214,22 @@ describe('index', () => {
         try {
           // Transition Y to errored state...
           if (this.isXEncapsulated) {
-            // Only redispatch if it is encapsulated.
-            this.dispatchEvent(
-              new EventYError({
-                detail: evt,
-              }),
-            );
+            // Only if it is encapsulated.
+            await this.x.stop();
           }
-          // Transition Y to stopped state
-          // Whether injected or encapsulated, it must be handled
-          await this.stop();
+          this.dispatchEvent(
+            new EventYError({
+              detail: evt,
+            }),
+          );
         } catch (err) {
           // Unexpected error is also dispatched
           this.dispatchEvent(
             new EventYError({
-              detail: err,
+              // Aggregate error because it's actually 2 errors
+              // If you use `js-errors`, then try making the cause an array
+              // The array order should be
+              detail: new AggregateError([err, evt.detail]),
             }),
           );
         }
@@ -292,21 +293,15 @@ describe('index', () => {
     // Imagine a bad event suddenly occurred!
     y1.doSomethingBad();
 
-    // Note that the handling of `EventXError` results in stopping `Y`.
-    // This is because `Y` is encapsulating `X`,
-    // and `X` is a critical part of `Y`. Where when `X` fails
-    // Then `Y` needs to stop.
-    // We also do not recall `Y.stop` here, because `js-async-init` is not involved.
-
     // Do note that `Y` does not listen for its own events.
     // Therefore it is not stopping because of `EventYError`.
     // Similarly `X` also does not stop in relation to `EventXError`.
     // It is therefore `Y` responsibility to stop `X` when handling the error.
+    // It is the responsibility of the current scope to stop `Y` when handling the `Y` error.
 
     await testsUtils.sleep(0);
-    expect(y1EventAllListenerMock).toHaveBeenCalledTimes(2);
+    expect(y1EventAllListenerMock).toHaveBeenCalledTimes(1);
     expect(y1EventAllListenerMock.mock.calls[0][0]).toBeInstanceOf(EventYError);
-    expect(y1EventAllListenerMock.mock.calls[1][0]).toBeInstanceOf(EventYStop);
 
     // In this case, this demonstrates an irrelevant event that is just being
     // re-emitted, which only happens because `X` is still encapsulated by `Y`.
@@ -379,21 +374,22 @@ describe('index', () => {
         try {
           // Transition Y to errored state...
           if (this.isXEncapsulated) {
-            // Only redispatch if it is encapsulated.
-            this.dispatchEvent(
-              new EventYError({
-                detail: evt,
-              }),
-            );
+            // Only if it is encapsulated.
+            await this.x.stop();
           }
-          // Transition Y to stopped state
-          // Whether injected or encapsulated, it must be handled
-          await this.stop();
+          this.dispatchEvent(
+            new EventYError({
+              detail: evt,
+            }),
+          );
         } catch (err) {
           // Unexpected error is also dispatched
           this.dispatchEvent(
             new EventYError({
-              detail: err,
+              // Aggregate error because it's actually 2 errors
+              // If you use `js-errors`, then try making the cause an array
+              // The array order should be
+              detail: new AggregateError([err, evt.detail]),
             }),
           );
         }
@@ -458,10 +454,11 @@ describe('index', () => {
     // Imagine a bad event suddenly occurred!
     y.doSomethingBad();
 
-    // When injecting, we never re-dispatch events, we will however handle them.
+    // In this case `X` hit an error, `Y` handles it but because `X` is injected,
+    // it doesn't do anything to `X`.
 
     await testsUtils.sleep(0);
     expect(yEventAllListenerMock).toHaveBeenCalledTimes(1);
-    expect(yEventAllListenerMock.mock.calls[0][0]).toBeInstanceOf(EventYStop);
+    expect(yEventAllListenerMock.mock.calls[0][0]).toBeInstanceOf(EventYError);
   });
 });
