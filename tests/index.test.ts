@@ -73,6 +73,14 @@ describe('index', () => {
     expect(eventListenerMock.mock.calls[1][0]).toBe(eventB);
     expect(eventListenerMock.mock.calls[2][0]).toBe(eventC);
     expect(eventListenerMock.mock.calls[3][0]).toBe(eventD);
+    expect(eventA.target).toBe(x);
+    expect(eventA.currentTarget).toBe(x);
+    expect(eventB.target).toBe(x);
+    expect(eventB.currentTarget).toBe(x);
+    expect(eventC.target).toBe(x);
+    expect(eventC.currentTarget).toBe(x);
+    expect(eventD.target).toBe(x);
+    expect(eventD.currentTarget).toBe(x);
   });
   test('remove listeners', () => {
     interface X extends Evented {}
@@ -109,6 +117,10 @@ describe('index', () => {
     expect(eventListenerMock).toHaveBeenCalledTimes(2);
     expect(eventListenerMock.mock.calls[0][0]).toBe(eventC);
     expect(eventListenerMock.mock.calls[1][0]).toBe(eventD);
+    expect(eventC.target).toBe(x);
+    expect(eventC.currentTarget).toBe(x);
+    expect(eventD.target).toBe(x);
+    expect(eventD.currentTarget).toBe(x);
   });
   test('listen for `EventAll`', () => {
     interface X extends Evented {}
@@ -146,6 +158,33 @@ describe('index', () => {
     expect(eventListenerMock.mock.calls[1][0].detail).toBe(event);
     expect(eventListenerMock.mock.calls[2][0].detail).toBe(event);
   });
+  test('`EventDefault` listeners catches only events not already handled', () => {
+    class EventCustom extends AbstractEvent {}
+    interface X extends Evented {}
+    @Evented()
+    class X {}
+    const x = new X();
+    const eventListenerSpecificMock = jest.fn();
+    const eventListenerDefaultMock = jest.fn();
+    x.addEventListener(EventCustom.name, (e) => {
+      expect(e.target).toBe(x);
+      eventListenerSpecificMock(e);
+    });
+    x.addEventListener(EventDefault.name, (e) => {
+      expect(e.target).toBe(x);
+      eventListenerDefaultMock(e);
+    });
+    const e = new Event('unhandled');
+    x.dispatchEvent(e);
+    expect(e.target).toBe(x);
+    expect(eventListenerSpecificMock).toHaveBeenCalledTimes(0);
+    expect(eventListenerDefaultMock).toHaveBeenCalledTimes(1);
+    const eC = new EventCustom();
+    x.dispatchEvent(eC);
+    expect(eC.target).toBe(x);
+    expect(eventListenerSpecificMock).toHaveBeenCalledTimes(1);
+    expect(eventListenerDefaultMock).toHaveBeenCalledTimes(1);
+  });
   test('`EventAll` listeners catches all events including events already handled', () => {
     class EventCustom extends AbstractEvent {}
     interface X extends Evented {}
@@ -154,9 +193,17 @@ describe('index', () => {
     const x = new X();
     const eventListenerSpecificMock = jest.fn();
     const eventListenerAnyMock = jest.fn();
-    x.addEventListener(EventCustom.name, eventListenerSpecificMock);
-    x.addEventListener(EventAll.name, eventListenerAnyMock);
-    x.dispatchEvent(new EventCustom());
+    x.addEventListener(EventCustom.name, (e) => {
+      expect(e.target).toBe(x);
+      eventListenerSpecificMock(e);
+    });
+    x.addEventListener(EventAll.name, (e) => {
+      expect(e.target).toBe(x);
+      eventListenerAnyMock(e);
+    });
+    const eC = new EventCustom();
+    x.dispatchEvent(eC);
+    expect(eC.target).toBe(x);
     expect(eventListenerSpecificMock).toHaveBeenCalledTimes(1);
     expect(eventListenerAnyMock).toHaveBeenCalledTimes(1);
   });

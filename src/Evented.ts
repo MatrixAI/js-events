@@ -63,8 +63,8 @@ function Evented() {
         const that = this;
         if (typeof callback === 'function') {
           handler = function (e) {
-            // Propagate the `this`
-            const result = callback.call(this, e);
+            // Propagate the `that`
+            const result = callback.call(that, e);
             that[_eventHandled].add(e);
             return result;
           };
@@ -75,7 +75,7 @@ function Evented() {
           typeof callback.handleEvent === 'function'
         ) {
           handler = function (e) {
-            // Don't propagate the `this`
+            // Don't propagate the `that`
             const result = callback.handleEvent(e);
             that[_eventHandled].add(e);
             return result;
@@ -103,26 +103,55 @@ function Evented() {
       }
 
       public dispatchEvent(event: Event) {
+        // Override the `target` and `currentTarget` to point to the current object
+        Object.defineProperties(event, {
+          target: {
+            value: this,
+            writable: false,
+          },
+          currentTarget: {
+            value: this,
+            writable: false,
+          },
+        });
         let status = this[_eventTarget].dispatchEvent(event);
         if (status && !this[_eventHandled].has(event)) {
-          status = this[_eventTarget].dispatchEvent(
-            new EventDefault({
-              bubbles: event.bubbles,
-              cancelable: event.cancelable,
-              composed: event.composed,
-              detail: event,
-            }),
-          );
+          const eventDefault = new EventDefault({
+            bubbles: event.bubbles,
+            cancelable: event.cancelable,
+            composed: event.composed,
+            detail: event,
+          });
+          Object.defineProperties(eventDefault, {
+            target: {
+              value: this,
+              writable: false,
+            },
+            currentTarget: {
+              value: this,
+              writable: false,
+            },
+          });
+          status = this[_eventTarget].dispatchEvent(eventDefault);
         }
         if (status) {
-          status = this[_eventTarget].dispatchEvent(
-            new EventAll({
-              bubbles: event.bubbles,
-              cancelable: event.cancelable,
-              composed: event.composed,
-              detail: event,
-            }),
-          );
+          const eventAll = new EventAll({
+            bubbles: event.bubbles,
+            cancelable: event.cancelable,
+            composed: event.composed,
+            detail: event,
+          });
+          Object.defineProperties(eventAll, {
+            target: {
+              value: this,
+              writable: false,
+            },
+            currentTarget: {
+              value: this,
+              writable: false,
+            },
+          });
+          status = this[_eventTarget].dispatchEvent(eventAll);
         }
         return status;
       }
