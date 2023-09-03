@@ -10,6 +10,12 @@ import {
 } from './utils';
 
 interface Evented {
+  get [eventTarget](): EventTarget;
+  get [eventHandlers](): WeakMap<
+    EventListenerOrEventListenerObject,
+    EventListener
+  >;
+  get [eventHandled](): WeakSet<Event>;
   addEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
@@ -166,4 +172,4 @@ function Evented() {
   };
 }
 
-export { Evented, eventTarget };
+export { Evented, eventTarget, eventHandlers, eventHandled };
