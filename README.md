@@ -58,13 +58,13 @@ x.addEventListener(EventCustom.name, (e) => {
 x.addEventListener(EventDefault.name, (e) => {
   // This is the wrapped underlying event
   console.log((e as EventDefault).detail);
-})
+});
 
 // Handle all events
 x.addEventListener(EventAll.name, (e) => {
   // This is the wrapped underlying event
   console.log((e as EventAny).detail);
-})
+});
 ```
 
 You can use this style to handle relevant events to perform side-effects, as well as propagate upwards irrelevant events.
