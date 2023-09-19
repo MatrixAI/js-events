@@ -1,5 +1,7 @@
+import type { ReadonlyWeakSet, EventHandlerInfo } from './types';
 import EventAll from './EventAll';
 import EventDefault from './EventDefault';
+import EventError from './EventError';
 import {
   _eventTarget,
   eventTarget,
@@ -7,15 +9,17 @@ import {
   eventHandlers,
   _eventHandled,
   eventHandled,
+  _handleEventError,
+  handleEventError,
+  canonicalizeOptions,
+  isEqualOptions,
 } from './utils';
 
 interface Evented {
   get [eventTarget](): EventTarget;
-  get [eventHandlers](): WeakMap<
-    EventListenerOrEventListenerObject,
-    EventListener
-  >;
-  get [eventHandled](): WeakSet<Event>;
+  get [eventHandlers](): ReadonlyMap<string, Set<EventHandlerInfo>>;
+  get [eventHandled](): ReadonlyWeakSet<Event>;
+  get [handleEventError](): (evt: EventError) => void;
   addEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
@@ -39,73 +43,227 @@ function Evented() {
   ) => {
     const constructor_ = class extends constructor {
       public [_eventTarget]: EventTarget = new EventTarget();
-      public [_eventHandlers]: WeakMap<
-        EventListenerOrEventListenerObject,
-        EventListener
-      > = new WeakMap();
+      public [_eventHandlers]: Map<string, Set<EventHandlerInfo>> = new Map();
       public [_eventHandled]: WeakSet<Event> = new WeakSet();
+      public [_handleEventError]: (evt: EventError) => void = (
+        evt: EventError,
+      ) => {
+        throw evt.detail;
+      };
+
+      public constructor(...args: Array<any>) {
+        super(...args);
+        // Default `EventError` handler
+        this[_eventTarget].addEventListener(
+          EventError.name,
+          this[_handleEventError],
+        );
+      }
 
       public get [eventTarget](): EventTarget {
         return this[_eventTarget];
       }
 
-      public get [eventHandlers](): WeakMap<
-        EventListenerOrEventListenerObject,
-        EventListener
-      > {
+      public get [eventHandlers](): ReadonlyMap<string, Set<EventHandlerInfo>> {
         return this[_eventHandlers];
       }
 
-      public get [eventHandled](): WeakSet<Event> {
+      public get [eventHandled](): ReadonlyWeakSet<Event> {
         return this[_eventHandled];
       }
 
+      public get [handleEventError](): (evt: EventError) => void {
+        return this[_handleEventError];
+      }
+
+      /**
+       * This can be O(n) per type due to searching for both handler and options.
+       */
       public addEventListener(
         type: string,
         callback: EventListenerOrEventListenerObject | null,
         options?: AddEventListenerOptions | boolean,
       ) {
-        let handler: EventListenerOrEventListenerObject | null;
+        options = canonicalizeOptions(options);
         const that = this;
-        if (typeof callback === 'function') {
-          handler = function (e) {
-            // Propagate the `that`
-            const result = callback.call(that, e);
-            that[_eventHandled].add(e);
-            return result;
-          };
-          this[_eventHandlers].set(callback, handler);
-        } else if (
-          callback != null &&
-          typeof callback === 'object' &&
-          typeof callback.handleEvent === 'function'
+        // Get the previously wrapped handler if it exists
+        let handler: EventListenerOrEventListenerObject | null | undefined;
+        let handlerSet: Set<EventHandlerInfo> | undefined;
+        let optionsEqual = false;
+        if (
+          typeof callback === 'function' ||
+          typeof callback?.handleEvent === 'function'
         ) {
-          handler = function (e) {
-            // Don't propagate the `that`
-            const result = callback.handleEvent(e);
-            that[_eventHandled].add(e);
-            return result;
-          };
-          this[_eventHandlers].set(callback, handler);
+          handlerSet = this[_eventHandlers].get(type);
+          if (handlerSet === undefined) {
+            handlerSet = new Set();
+            this[_eventHandlers].set(type, handlerSet);
+          }
+          for (const handlerInfo of handlerSet) {
+            if (handlerInfo.callback === callback) {
+              handler = handlerInfo.handler;
+              if (isEqualOptions(handlerInfo.options, options)) {
+                optionsEqual = true;
+                break;
+              }
+            }
+          }
+        }
+        if (typeof callback === 'function') {
+          if (handler == null) {
+            handler = async function (e) {
+              // Indicate that the event is now handled
+              // It must done earlier in case the callback is asynchronous
+              that[_eventHandled].add(e);
+              let result: any;
+              try {
+                // Propagate the `that`
+                result = callback.call(that, e);
+              } catch (e) {
+                // Deal with the uncaught exception
+                this.dispatchEvent(
+                  new EventError({
+                    detail: e,
+                  }),
+                );
+              }
+              // If the result is `PromiseLike` await the result
+              // This does use `await` on the callback in case it is synchronous
+              // in order to preserve operational microtask scheduling behaviour
+              // Deal with the unhandled rejection
+              if (typeof result?.then === 'function') {
+                try {
+                  await result;
+                } catch (e) {
+                  this.dispatchEvent(
+                    new EventError({
+                      detail: e,
+                    }),
+                  );
+                }
+              }
+            };
+            // Add new handler info because handler is new
+            handlerSet!.add({
+              callback,
+              options,
+              handler,
+            });
+          } else if (!optionsEqual) {
+            // Add new handler info with the same handler because options is different
+            handlerSet!.add({
+              callback,
+              options,
+              handler: handler as EventListener,
+            });
+          }
+        } else if (typeof callback?.handleEvent === 'function') {
+          if (handler == null) {
+            handler = async function (e) {
+              // Indicate that the event is now handled
+              // It must done earlier in case the callback is asynchronous
+              that[_eventHandled].add(e);
+              let result: any;
+              try {
+                // Don't propagate the `that`
+                result = callback.handleEvent(e);
+              } catch (e) {
+                // Deal with the uncaught exception
+                this.dispatchEvent(
+                  new EventError({
+                    detail: e,
+                  }),
+                );
+              }
+              // If the result is `PromiseLike` await the result
+              // This does use `await` on the callback in case it is synchronous
+              // in order to preserve operational microtask scheduling behaviour
+              // Deal with the unhandled rejection
+              if (typeof result?.then === 'function') {
+                try {
+                  await result;
+                } catch (e) {
+                  this.dispatchEvent(
+                    new EventError({
+                      detail: e,
+                    }),
+                  );
+                }
+              }
+              return result;
+            };
+            // Add new handler info because handler is new
+            handlerSet!.add({
+              callback,
+              options,
+              handler,
+            });
+          } else if (!optionsEqual) {
+            // Add new handler info with the same handler because options is different
+            handlerSet!.add({
+              callback,
+              options,
+              handler: handler as EventListener,
+            });
+          }
         } else {
           handler = callback;
         }
         this[_eventTarget].addEventListener(type, handler, options);
+        // Disable the base error handler if there is at least one listener for errors
+        if (type === EventError.name && handlerSet?.size === 1) {
+          this[_eventTarget].removeEventListener(
+            EventError.name,
+            this[_handleEventError],
+          );
+        }
       }
 
+      /**
+       * This can be O(n) per type due to searching for both handler and options.
+       */
       public removeEventListener(
         type: string,
         callback: EventListenerOrEventListenerObject | null,
         options?: EventListenerOptions | boolean,
       ) {
-        let handler: EventListenerOrEventListenerObject | null;
+        options = canonicalizeOptions(options);
+        let handler: EventListenerOrEventListenerObject | null | undefined;
+        let handlerSet: Set<EventHandlerInfo> | undefined;
+        let handlerInfoToBeRemoved: EventHandlerInfo | undefined;
         if (callback != null) {
-          // It should exist as long the type is correct
-          handler = this[_eventHandlers].get(callback)!;
+          handlerSet = this[_eventHandlers].get(type);
+          if (handlerSet === undefined) {
+            return;
+          }
+          for (const handlerInfo of handlerSet) {
+            if (
+              handlerInfo.callback === callback &&
+              isEqualOptions(handlerInfo.options, options)
+            ) {
+              // The handler will be the same instance
+              handler = handlerInfo.handler;
+              handlerInfoToBeRemoved = handlerInfo;
+              break;
+            }
+          }
+          if (handler == null) {
+            return;
+          }
         } else {
           handler = callback;
         }
         this[_eventTarget].removeEventListener(type, handler, options);
+        if (handlerSet != null && handlerInfoToBeRemoved != null) {
+          handlerSet.delete(handlerInfoToBeRemoved);
+          // Enable the base error handler if there is no listener for errors
+          if (type === EventError.name && handlerSet.size === 0) {
+            this[_eventTarget].addEventListener(
+              EventError.name,
+              this[_handleEventError],
+            );
+          }
+        }
       }
 
       public dispatchEvent(event: Event) {
@@ -120,46 +278,51 @@ function Evented() {
             writable: false,
           },
         });
-        let status = this[_eventTarget].dispatchEvent(event);
-        if (status && !this[_eventHandled].has(event)) {
-          const eventDefault = new EventDefault({
-            bubbles: event.bubbles,
-            cancelable: event.cancelable,
-            composed: event.composed,
-            detail: event,
-          });
-          Object.defineProperties(eventDefault, {
-            target: {
-              value: this,
-              writable: false,
-            },
-            currentTarget: {
-              value: this,
-              writable: false,
-            },
-          });
-          status = this[_eventTarget].dispatchEvent(eventDefault);
+        if (event instanceof EventError) {
+          // If the event is `EventError`, we don't bother with `EventDefault` and `EventAll`
+          return this[_eventTarget].dispatchEvent(event);
+        } else {
+          let status = this[_eventTarget].dispatchEvent(event);
+          if (status && !this[_eventHandled].has(event)) {
+            const eventDefault = new EventDefault({
+              bubbles: event.bubbles,
+              cancelable: event.cancelable,
+              composed: event.composed,
+              detail: event,
+            });
+            Object.defineProperties(eventDefault, {
+              target: {
+                value: this,
+                writable: false,
+              },
+              currentTarget: {
+                value: this,
+                writable: false,
+              },
+            });
+            status = this[_eventTarget].dispatchEvent(eventDefault);
+          }
+          if (status) {
+            const eventAll = new EventAll({
+              bubbles: event.bubbles,
+              cancelable: event.cancelable,
+              composed: event.composed,
+              detail: event,
+            });
+            Object.defineProperties(eventAll, {
+              target: {
+                value: this,
+                writable: false,
+              },
+              currentTarget: {
+                value: this,
+                writable: false,
+              },
+            });
+            status = this[_eventTarget].dispatchEvent(eventAll);
+          }
+          return status;
         }
-        if (status) {
-          const eventAll = new EventAll({
-            bubbles: event.bubbles,
-            cancelable: event.cancelable,
-            composed: event.composed,
-            detail: event,
-          });
-          Object.defineProperties(eventAll, {
-            target: {
-              value: this,
-              writable: false,
-            },
-            currentTarget: {
-              value: this,
-              writable: false,
-            },
-          });
-          status = this[_eventTarget].dispatchEvent(eventAll);
-        }
-        return status;
       }
     };
     // Preserve the name
@@ -172,4 +335,4 @@ function Evented() {
   };
 }
 
-export { Evented, eventTarget, eventHandlers, eventHandled };
+export { Evented, eventTarget, eventHandlers, eventHandled, handleEventError };
