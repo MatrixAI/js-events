@@ -1,4 +1,11 @@
-import { AbstractEvent, EventDefault, EventAll, Evented, utils } from '@';
+import {
+  AbstractEvent,
+  EventDefault,
+  EventAll,
+  EventError,
+  Evented,
+  utils,
+} from '@';
 import * as testsUtils from './utils';
 
 describe('index', () => {
@@ -507,5 +514,130 @@ describe('index', () => {
     await testsUtils.sleep(0);
     expect(yEventAllListenerMock).toHaveBeenCalledTimes(1);
     expect(yEventAllListenerMock.mock.calls[0][0]).toBeInstanceOf(EventYError);
+  });
+  test('`EventError` listeners catches unhandled rejections and uncaught exceptions', async () => {
+    class EventUncaughtException extends AbstractEvent {}
+    class EventUnhandledRejection extends AbstractEvent {}
+    interface X extends Evented {}
+    @Evented()
+    class X {}
+    const x = new X();
+    const eventListenerErrorMock = jest.fn();
+    x.addEventListener(EventError.name, (evt: EventError) => {
+      expect(evt).toBeInstanceOf(EventError);
+      eventListenerErrorMock(evt.detail);
+    });
+    x.addEventListener(EventUncaughtException.name, () => {
+      throw new Error('uncaught');
+    });
+    x.addEventListener(EventUnhandledRejection.name, async () => {
+      throw new Error('unhandled');
+    });
+    const evtUncaught = new EventUncaughtException();
+    const evtUnhandled = new EventUnhandledRejection();
+    x.dispatchEvent(evtUncaught);
+    x.dispatchEvent(evtUnhandled);
+    await testsUtils.sleep(0);
+    expect(eventListenerErrorMock).toHaveBeenCalledTimes(2);
+    expect(eventListenerErrorMock.mock.calls[0][0]).toBeInstanceOf(Error);
+    expect(eventListenerErrorMock.mock.calls[0][0].message).toBe('uncaught');
+    expect(eventListenerErrorMock.mock.calls[1][0]).toBeInstanceOf(Error);
+    expect(eventListenerErrorMock.mock.calls[1][0].message).toBe('unhandled');
+  });
+  test('`EventError` default handler throws up unhandled rejections and uncaught exceptions', async () => {
+    // Notice that the default `EventError` handler always throws it up as a synchronus uncaught exception
+    const uncaughtExceptionErrorMock = jest.fn();
+    const uncaughtExceptionHandler = (e: Error) => {
+      uncaughtExceptionErrorMock(e);
+    };
+    process.setUncaughtExceptionCaptureCallback(uncaughtExceptionHandler);
+    try {
+      class EventUncaughtException extends AbstractEvent {}
+      class EventUnhandledRejection extends AbstractEvent {}
+      interface X extends Evented {}
+      @Evented()
+      class X {}
+      const x = new X();
+      x.addEventListener(EventUncaughtException.name, () => {
+        throw new Error('uncaught');
+      });
+      x.addEventListener(EventUnhandledRejection.name, async () => {
+        throw new Error('unhandled');
+      });
+      const evtUncaught = new EventUncaughtException();
+      const evtUnhandled = new EventUnhandledRejection();
+      x.dispatchEvent(evtUncaught);
+      x.dispatchEvent(evtUnhandled);
+      await testsUtils.sleep(0);
+      expect(uncaughtExceptionErrorMock).toHaveBeenCalledTimes(2);
+      expect(uncaughtExceptionErrorMock.mock.calls[0][0]).toBeInstanceOf(Error);
+      expect(uncaughtExceptionErrorMock.mock.calls[0][0].message).toBe(
+        'uncaught',
+      );
+      expect(uncaughtExceptionErrorMock.mock.calls[1][0]).toBeInstanceOf(Error);
+      expect(uncaughtExceptionErrorMock.mock.calls[1][0].message).toBe(
+        'unhandled',
+      );
+    } finally {
+      process.setUncaughtExceptionCaptureCallback(null);
+    }
+  });
+  test('adding duplicate event listeners results in only 1 listener', async () => {
+    class EventCustom extends AbstractEvent {}
+    interface X extends Evented {}
+    @Evented()
+    class X {}
+    const x = new X();
+    const eventListenerMock = jest.fn();
+    const eventListener = (e: EventCustom) => {
+      eventListenerMock(e.detail);
+    };
+    // Only this one gets called
+    x.addEventListener(EventCustom.name, eventListener);
+    x.addEventListener(EventCustom.name, eventListener);
+    x.addEventListener(EventCustom.name, eventListener, false);
+    x.addEventListener(EventCustom.name, eventListener, {});
+    x.addEventListener(EventCustom.name, eventListener, { once: false });
+    x.addEventListener(EventCustom.name, eventListener, { passive: false });
+    x.addEventListener(EventCustom.name, eventListener, { capture: false });
+    x.addEventListener(EventCustom.name, eventListener, {
+      once: false,
+      passive: false,
+      capture: false,
+    });
+    x.addEventListener(EventCustom.name, eventListener, {
+      signal: new AbortController().signal,
+    });
+    x.addEventListener(EventCustom.name, eventListener, {
+      hello: 'world',
+    } as AddEventListenerOptions);
+    x.dispatchEvent(new EventCustom());
+    await testsUtils.sleep(0);
+    expect(x[utils.eventHandlers].size).toBe(1);
+    expect(x[utils.eventHandlers].get(EventCustom.name)!.size).toBe(1);
+    expect(eventListenerMock).toHaveBeenCalledTimes(1);
+  });
+  test('adding duplicate event listeners with different capture option results in multiple listeners', async () => {
+    class EventCustom extends AbstractEvent {}
+    interface X extends Evented {}
+    @Evented()
+    class X {}
+    const x = new X();
+    const eventListenerMock = jest.fn();
+    const eventListener = (e: EventCustom) => {
+      eventListenerMock(e.detail);
+    };
+    // The following 3 are the same
+    x.addEventListener(EventCustom.name, eventListener);
+    x.addEventListener(EventCustom.name, eventListener, false);
+    x.addEventListener(EventCustom.name, eventListener, { capture: false });
+    // The following 2 are the same
+    x.addEventListener(EventCustom.name, eventListener, true);
+    x.addEventListener(EventCustom.name, eventListener, { capture: true });
+    x.dispatchEvent(new EventCustom());
+    await testsUtils.sleep(0);
+    expect(x[utils.eventHandlers].size).toBe(1);
+    expect(x[utils.eventHandlers].get(EventCustom.name)!.size).toBe(2);
+    expect(eventListenerMock).toHaveBeenCalledTimes(2);
   });
 });
