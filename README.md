@@ -9,7 +9,7 @@ Events for push-flow abstractions.
 
 ```ts
 // For when you just want a regular event without `detail`
-// Note that the `detail` type is `null`
+// Note that the `detail` type is `undefined`, unlike `CustomEvent`
 class Event1 extends AbstractEvent {}
 
 // For when you want a event with `detail`
@@ -21,13 +21,11 @@ class Event2 extends AbstractEvent<string> {}
 class Event3<T> extends AbstractEvent<T> {}
 
 // Allow caller to customise the `detail` type
-// But this is more accurate as not passing anything
-// Would mean the `detail` is in fact `null`
-class Event4<T = null> extends AbstractEvent<T> {}
+class Event4<T extends Event = Event> extends AbstractEvent<T> {}
 
 // When you need to customise the constructor signature
 class Event5 extends AbstractEvent<string> {
-  constructor(options: CustomEventInit<string>) {
+  constructor(options: EventInit & { detail: string }) {
     // Make sure you pass `arguments`!
     super(Event5.name, options, arguments);
   }
@@ -81,6 +79,8 @@ x.addEventListener(EventInfinite.name, (e) => {
 This will terminate the infinite loop on the first time it gets handled.
 
 Therefore it is a good idea to always be as specific with your event types as possible.
+
+Furthermore any unhandled rejections or uncaught exceptions will be redispatched as `EventError`. However if there's no listener registered for this, it will be thrown up as an uncaught exception.
 
 ## Installation
 

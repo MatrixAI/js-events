@@ -15,14 +15,14 @@ describe('index', () => {
     class Event2 extends AbstractEvent<string> {}
     class Event3 extends AbstractEvent<object> {}
     const e0 = new Event0();
-    expect(e0.detail).toBeNull();
+    expect(e0.detail).toBeUndefined();
     const e1 = new Event1();
-    expect(e1.detail).toBeNull();
+    expect(e1.detail).toBeUndefined();
     const e1_ = new Event1({ detail: 'string' });
     expect(e1_.detail).toBe('string');
     // This is not caught by the type system
     const e2 = new Event2();
-    expect(e2.detail).toBeNull();
+    expect(e2.detail).toBeUndefined();
     const e2_ = new Event2({ detail: 'string' });
     expect(e2_.detail).toBe('string');
     const e11 = e1.clone();

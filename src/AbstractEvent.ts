@@ -1,8 +1,10 @@
 /**
- * By default the `detail` property of `CustomEvent` is `null`.
- * So the default type has to be `null` too.
+ * Unlike `CustomEvent`, the `detail` property can be `undefined`.
+ * It will not default to `null`.
  */
-class AbstractEvent<T = null> extends CustomEvent<T> {
+class AbstractEvent<T = undefined> extends Event {
+  public readonly detail: T;
+
   protected constructorParams: IArguments;
 
   public constructor(
@@ -21,8 +23,10 @@ class AbstractEvent<T = null> extends CustomEvent<T> {
   ) {
     if (typeof type === 'string') {
       super(type, options as CustomEventInit<T> | undefined);
+      this.detail = (options as CustomEventInit<T> | undefined)?.detail as T;
     } else {
       super(new.target.name, type);
+      this.detail = type.detail as T;
       constructorParams = options as IArguments | undefined;
     }
     this.constructorParams = constructorParams ?? arguments;
