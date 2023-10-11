@@ -47,8 +47,5 @@
     "tsconfig-paths": "^3.9.0",
     "typedoc": "^0.24.8",
     "typescript": "^5.1.6"
-  },
-  "engines": {
-    "node": ">=19.0.0"
   }
 }
