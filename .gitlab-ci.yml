@@ -22,6 +22,8 @@ default:
     # Replace this in windows runners that use powershell
     # with `mkdir -Force "$CI_PROJECT_DIR/tmp"`
     - mkdir -p "$CI_PROJECT_DIR/tmp"
+    # so that refreshenv will resolve to the correct Powershell alias
+    - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
 
 # Cached directories shared between jobs & pipelines per-branch per-runner
 cache:
