@@ -1,3 +1,4 @@
+import * as testsUtils from './utils.js';
 import {
   AbstractEvent,
   EventDefault,
@@ -5,8 +6,7 @@ import {
   EventError,
   Evented,
   utils,
-} from '@';
-import * as testsUtils from './utils';
+} from '#index.js';
 
 describe('index', () => {
   test('abstract event subclasses', () => {

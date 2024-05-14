@@ -1,4 +1,4 @@
-import AbstractEvent from './AbstractEvent';
+import AbstractEvent from './AbstractEvent.js';
 
 /**
  * EventAll wraps all dispatched events including already handled events.

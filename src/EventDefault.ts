@@ -1,4 +1,4 @@
-import AbstractEvent from './AbstractEvent';
+import AbstractEvent from './AbstractEvent.js';
 
 /**
  * EventDefault wraps dispatched events that were not handled.
