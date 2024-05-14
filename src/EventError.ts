@@ -1,4 +1,4 @@
-import AbstractEvent from './AbstractEvent';
+import AbstractEvent from './AbstractEvent.js';
 
 /**
  * EventError dispatches all unhandled rejections and uncaught exceptions

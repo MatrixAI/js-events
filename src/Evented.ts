@@ -1,7 +1,7 @@
-import type { ReadonlyWeakSet, EventHandlerInfo } from './types';
-import EventAll from './EventAll';
-import EventDefault from './EventDefault';
-import EventError from './EventError';
+import type { ReadonlyWeakSet, EventHandlerInfo } from './types.js';
+import EventAll from './EventAll.js';
+import EventDefault from './EventDefault.js';
+import EventError from './EventError.js';
 import {
   _eventTarget,
   eventTarget,
@@ -13,7 +13,7 @@ import {
   handleEventError,
   canonicalizeOptions,
   isEqualOptions,
-} from './utils';
+} from './utils.js';
 
 interface Evented {
   get [eventTarget](): EventTarget;
