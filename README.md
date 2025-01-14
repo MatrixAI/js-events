@@ -1,8 +1,5 @@
 # js-events
 
-staging:[![pipeline status](https://gitlab.com/MatrixAI/open-source/js-events/badges/staging/pipeline.svg)](https://gitlab.com/MatrixAI/open-source/js-events/commits/staging)
-master:[![pipeline status](https://gitlab.com/MatrixAI/open-source/js-events/badges/master/pipeline.svg)](https://gitlab.com/MatrixAI/open-source/js-events/commits/master)
-
 Events for push-flow abstractions.
 
 ### `AbstractEvent`
@@ -90,7 +87,7 @@ npm install --save @matrixai/events
 
 ## Development
 
-Run `nix-shell`, and once you're inside, you can use:
+Run `nix develop`, and once you're inside, you can use:
 
 ```sh
 # install (or reinstall packages from package.json)
