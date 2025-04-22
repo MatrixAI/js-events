@@ -4,4 +4,4 @@ export { default as EventAll } from './EventAll.js';
 export { default as EventError } from './EventError.js';
 export { Evented } from './Evented.js';
 export * as utils from './utils.js';
-export * as types from './types.js';
+export type * as types from './types.js';

@@ -64,13 +64,17 @@ x.addEventListener(EventAll.name, (e) => {
 
 You can use this style to handle relevant events to perform side-effects, as well as propagate upwards irrelevant events.
 
-Note that some side-effects you perform may trigger an infinite loop by causing something to emit the specific event type that you are handling. In these cases you should specialise handling of those events with a `once: true`  option, so that they are only handled once.
+Note that some side-effects you perform may trigger an infinite loop by causing something to emit the specific event type that you are handling. In these cases you should specialise handling of those events with a `once: true` option, so that they are only handled once.
 
 ```ts
-x.addEventListener(EventInfinite.name, (e) => {
-  console.log(e as EventInfinite);
-  performActionThatMayTriggerEventInfinite();
-}, { once: true });
+x.addEventListener(
+  EventInfinite.name,
+  (e) => {
+    console.log(e as EventInfinite);
+    performActionThatMayTriggerEventInfinite();
+  },
+  { once: true },
+);
 ```
 
 This will terminate the infinite loop on the first time it gets handled.
