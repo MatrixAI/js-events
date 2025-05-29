@@ -29,11 +29,14 @@ class Event5 extends AbstractEvent<string> {
 }
 ```
 
-When redispatching an event, you must call `event.clone()`. The same instance cannot be redispatched. When the event is cloned, all constructor parameters are shallow-copied.
+When redispatching an event, you must call `event.clone()`. The same instance
+cannot be redispatched. When the event is cloned, all constructor parameters are
+shallow-copied.
 
 ### `Evented`
 
-We combine `Evented` with `AbstractEvent` to gain type-safety and convenience of the wildcard any handler.
+We combine `Evented` with `AbstractEvent` to gain type-safety and convenience of
+the wildcard any handler.
 
 ```ts
 class EventCustom extends AbstractEvent {}
@@ -62,9 +65,13 @@ x.addEventListener(EventAll.name, (e) => {
 });
 ```
 
-You can use this style to handle relevant events to perform side-effects, as well as propagate upwards irrelevant events.
+You can use this style to handle relevant events to perform side-effects, as
+well as propagate upwards irrelevant events.
 
-Note that some side-effects you perform may trigger an infinite loop by causing something to emit the specific event type that you are handling. In these cases you should specialise handling of those events with a `once: true` option, so that they are only handled once.
+Note that some side-effects you perform may trigger an infinite loop by causing
+something to emit the specific event type that you are handling. In these cases
+you should specialise handling of those events with a `once: true` option, so
+that they are only handled once.
 
 ```ts
 x.addEventListener(
@@ -79,9 +86,12 @@ x.addEventListener(
 
 This will terminate the infinite loop on the first time it gets handled.
 
-Therefore it is a good idea to always be as specific with your event types as possible.
+Therefore it is a good idea to always be as specific with your event types as
+possible.
 
-Furthermore any unhandled rejections or uncaught exceptions will be redispatched as `EventError`. However if there's no listener registered for this, it will be thrown up as an uncaught exception.
+Furthermore any unhandled rejections or uncaught exceptions will be redispatched
+as `EventError`. However if there's no listener registered for this, it will be
+thrown up as an uncaught exception.
 
 ## Installation
 
