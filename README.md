@@ -61,7 +61,7 @@ x.addEventListener(EventDefault.name, (e) => {
 // Handle all events
 x.addEventListener(EventAll.name, (e) => {
   // This is the wrapped underlying event
-  console.log((e as EventAny).detail);
+  console.log((e as EventAll).detail);
 });
 ```
 
@@ -93,7 +93,9 @@ Furthermore any unhandled rejections or uncaught exceptions will be redispatched
 as `EventError`. However if there's no listener registered for this, it will be
 thrown up as an uncaught exception.
 
-## Installation
+## Installation and package boundary
+
+Require Node.js 24 or newer.
 
 ```sh
 npm install --save @matrixai/events
@@ -101,58 +103,80 @@ npm install --save @matrixai/events
 
 ## Development
 
-Run `nix develop`, and once you're inside, you can use:
+Require Node.js 24 or newer. The package emits ES2022 ESM and declarations using
+NodeNext resolution. Use standard decorators, without legacy decorator metadata.
+The root export, `.js` subpaths, wildcard passthrough, and package metadata
+export remain compatible; `#*` is internal to build-first tests, not a consumer
+API. The package has no runtime dependencies. Published files are allowlisted in
+[the manifest](package.json).
+
+```ts
+import { AbstractEvent, Evented } from '@matrixai/events';
+import EventAll from '@matrixai/events/EventAll.js';
+```
+
+The private [standards submodule](.matrixai/matrixai-standards) and
+[library-js profile](.matrixai/repo-profile.yml) are governed by
+[AGENTS](AGENTS.md). Initialize standards with authorized SSH access:
 
 ```sh
-# install (or reinstall packages from package.json)
-npm install
-# build the dist
-npm run build
-# run the repl (this allows you to import from ./src)
-npm run ts-node
-# run the tests
-npm run test
-# lint the source code
-npm run lint
-# automatically fix the source
+git submodule update --init --depth 1 -- .matrixai/matrixai-standards
+nix run './.matrixai/matrixai-standards#skills-materializer' -- --standards-root ./.matrixai/matrixai-standards
+```
+
+Use `direnv allow` after reviewing [.envrc](.envrc), or enter the same
+integrated shell manually with `nix develop --no-pure-eval`. Activation does not
+fetch secrets, install npm dependencies, or change persistent shell options.
+Local state in `.direnv`, `.devenv`, and `tmp` is ignored. Once active, run
+commands directly rather than nesting direnv activation. Devenv is the flake
+integration compatibility wrapper, not a separate flakeless project. Its 2.4.0
+commands are `tasks`, `test`, `up`, and `version`; inspect `devenv --help` for
+the pinned surface.
+
+```sh
+npm ci --ignore-scripts
 npm run lintfix
+npm run typecheck
+npm test -- --runInBand
+npm run check:package
+npm run check:portable
+npm run check
 ```
 
-### Docs Generation
+MatrixAI lint comes from `pkgs.matrixai-lint` in the selected public producer,
+with explicit Nix and shell backends. `nix fmt` uses that same lint authority.
+There is no npm lint dependency or separate lint flake input. Lint scripts need
+the development shell's tools; hermetic checks provide their own environment.
+
+Tests build first and use Jest/SWC standard decorators with a 20-second default
+timeout. JUnit is written to `tmp/junit/junit.xml`. Package checks unpack a real
+archive, test ESM root/subpath/metadata consumers, validate declarations, and
+verify the canonical manifest and file allowlist. Static portability checks
+reject non-relative emitted imports. Optional `npm run check:browser` requires
+Firefox on PATH (or `EVENTS_BROWSER` pointing to Firefox) and runs an isolated
+headless import smoke. It is not full browser conformance.
+
+## Hermetic checks and prepared archives
+
+[The flake](flake.nix) exposes independent `verify`, `lint`, and `default`
+checks on x86_64-linux. They do not depend on direnv, devenv, installed local
+npm packages, or live developer state. Reports and reusable artifacts are in
+each check output. Before Git-backed Nix evaluation, stage exact new input
+files; tracked edits and deletions are already visible.
 
 ```sh
-npm run docs
+nix flake check --no-write-lock-file -L
+nix build '.#packages.x86_64-linux.npm-package' --no-link --print-out-paths
+nix build '.#packages.x86_64-linux.npm-package-unpacked' --no-link --print-out-paths
+nix eval '.#packages.x86_64-linux.npm-package.npmPackage' --json
 ```
 
-See the docs at: https://matrixai.github.io/js-events/
+`npm-package` is a prepared `.tgz` with compiled code and declarations, not a
+Git source archive requiring a consumer-side build. Its manifest is unchanged.
+The descriptor records npm dependency and source provenance metadata;
+`npmDistribution` identifies the prepared archive and has no runtime providers.
 
-### Publishing
-
-Publishing is handled automatically by the staging pipeline.
-
-Prerelease:
-
-```sh
-# npm login
-npm version prepatch --preid alpha # premajor/preminor/prepatch
-git push --follow-tags
-```
-
-Release:
-
-```sh
-# npm login
-npm version patch # major/minor/patch
-git push --follow-tags
-```
-
-Manually:
-
-```sh
-# npm login
-npm version patch # major/minor/patch
-npm run build
-npm publish --access public
-git push
-git push --tags
-```
+Documentation is handwritten Markdown. The local override retires TypeDoc,
+generated docs, ignore-based npm packaging, and automatic publication workflows.
+Releases are Git-based and require deliberate review. Publishing, tagging, and
+version changes are not automatic consequences of a tooling commit.

@@ -9,17 +9,14 @@
     "strictNullChecks": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleResolution": "NodeNext",
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "ES2022",
-    "baseUrl": "./src",
     "paths": {
-      "#*": ["*"]
+      "#*": ["./src/*"]
     },
     "skipLibCheck": true,
     "noEmit": true
@@ -28,7 +25,6 @@
     "./src/**/*",
     "./src/**/*.json",
     "./tests/**/*",
-    "./scripts/**/*",
-    "./benches/**/*"
+    "./scripts/**/*"
   ]
 }
