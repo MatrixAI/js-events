@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from 'vitest';
 import * as testsUtils from './utils.js';
 import {
   AbstractEvent,
@@ -62,7 +63,7 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerMock = jest.fn();
+    const eventListenerMock = vi.fn();
     x.addEventListener('a', eventListenerMock);
     x.addEventListener('b', eventListenerMock);
     x.addEventListener('c', eventListenerMock);
@@ -94,7 +95,7 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerMock = jest.fn();
+    const eventListenerMock = vi.fn();
     const eventA = new Event('a');
     const eventB = new Event('b');
     const eventC = new Event('c');
@@ -135,7 +136,7 @@ describe('index', () => {
     class X {}
     const x = new X();
     const event = new Event('test event');
-    const eventListenerMock = jest.fn();
+    const eventListenerMock = vi.fn();
     x.addEventListener(EventAll.name, eventListenerMock);
     x.dispatchEvent(event);
     expect(eventListenerMock).toHaveBeenCalledTimes(1);
@@ -153,7 +154,7 @@ describe('index', () => {
     class X {}
     const x = new X();
     const event = new Event('test event');
-    const eventListenerMock = jest.fn();
+    const eventListenerMock = vi.fn();
     x.addEventListener(EventAll.name, eventListenerMock);
     x.dispatchEvent(event);
     expect(eventListenerMock).toHaveBeenCalledTimes(1);
@@ -171,8 +172,8 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerSpecificMock = jest.fn();
-    const eventListenerDefaultMock = jest.fn();
+    const eventListenerSpecificMock = vi.fn();
+    const eventListenerDefaultMock = vi.fn();
     x.addEventListener(EventCustom.name, (e) => {
       expect(e.target).toBe(x);
       eventListenerSpecificMock(e);
@@ -198,8 +199,8 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerSpecificMock = jest.fn();
-    const eventListenerAnyMock = jest.fn();
+    const eventListenerSpecificMock = vi.fn();
+    const eventListenerAnyMock = vi.fn();
     x.addEventListener(EventCustom.name, (e) => {
       expect(e.target).toBe(x);
       eventListenerSpecificMock(e);
@@ -338,7 +339,7 @@ describe('index', () => {
       }
     }
 
-    const y1EventAllListenerMock = jest.fn();
+    const y1EventAllListenerMock = vi.fn();
     const y1 = new Y();
     y1.addEventListener(EventAll.name, (e) => {
       y1EventAllListenerMock((e as EventAll).detail);
@@ -360,7 +361,7 @@ describe('index', () => {
     // In this case, this demonstrates an irrelevant event that is just being
     // re-emitted, which only happens because `X` is still encapsulated by `Y`.
 
-    const y2EventAllListenerMock = jest.fn();
+    const y2EventAllListenerMock = vi.fn();
     const y2 = new Y();
     y2.addEventListener(EventAll.name, (e) => {
       y2EventAllListenerMock((e as EventAll).detail);
@@ -500,7 +501,7 @@ describe('index', () => {
 
     const x = new X();
     const y = new Y(x);
-    const yEventAllListenerMock = jest.fn();
+    const yEventAllListenerMock = vi.fn();
     y.addEventListener(EventAll.name, (e) => {
       yEventAllListenerMock((e as EventAll).detail);
     });
@@ -522,7 +523,7 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerErrorMock = jest.fn();
+    const eventListenerErrorMock = vi.fn();
     x.addEventListener(EventError.name, (evt: EventError) => {
       expect(evt).toBeInstanceOf(EventError);
       eventListenerErrorMock(evt.detail);
@@ -546,7 +547,7 @@ describe('index', () => {
   });
   test('`EventError` default handler throws up unhandled rejections and uncaught exceptions', async () => {
     // Notice that the default `EventError` handler always throws it up as a synchronus uncaught exception
-    const uncaughtExceptionErrorMock = jest.fn();
+    const uncaughtExceptionErrorMock = vi.fn();
     const uncaughtExceptionHandler = (e: Error) => {
       uncaughtExceptionErrorMock(e);
     };
@@ -588,7 +589,7 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerMock = jest.fn();
+    const eventListenerMock = vi.fn();
     const eventListener = (e: EventCustom) => {
       eventListenerMock(e.detail);
     };
@@ -623,7 +624,7 @@ describe('index', () => {
     @Evented()
     class X {}
     const x = new X();
-    const eventListenerMock = jest.fn();
+    const eventListenerMock = vi.fn();
     const eventListener = (e: EventCustom) => {
       eventListenerMock(e.detail);
     };

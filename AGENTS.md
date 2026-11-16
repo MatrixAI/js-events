@@ -37,10 +37,12 @@
   declarations in [dist](dist); retain existing public import compatibility.
 - Preserve event APIs, dispatch, listeners, detail, errors, default/all events,
   and subclass behavior. Keep the package free of runtime dependencies.
-- Source imports are relative. Tests use the package's compiled-output mapping
-  and execute through the package test script after its build step.
-- Keep Jest/SWC, a 20-second default test timeout, and explicit type imports.
-  Any decorators must use standard-track semantics, never legacy metadata.
+- Source imports are relative. Tests use the package's compiled-output mapping.
+  Local tests build incrementally without cleaning; hermetic checks use the
+  prebuilt option. The normal build cleans before compiling.
+- Use Vitest with explicit test imports, a 20-second default test timeout, and
+  explicit type imports. Any decorators must use standard-track semantics, never
+  legacy metadata.
 - Documentation is handwritten Markdown; generated API documentation is not
   maintained. This overrides the generic profile's documentation-generator rule.
 - Obtain MatrixAI lint from the selected nixpkgs-matrixai package set. Do not
@@ -66,7 +68,7 @@
 
 - Build: `npm run build`.
 - Types: `npm run typecheck`.
-- Tests: `npm test -- --runInBand`.
+- Tests: `npm test`.
 - Development formatting: `npm run lintfix` or `nix fmt`.
 - Lint verification: `npm run lint`.
 - Package verification: `npm run check:package`.

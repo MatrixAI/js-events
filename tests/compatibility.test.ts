@@ -1,3 +1,4 @@
+import { describe, expect, test, vi } from 'vitest';
 import {
   AbstractEvent,
   Evented,
@@ -26,9 +27,9 @@ describe('event compatibility', () => {
 
   test('once listeners and abort signals retain native registration semantics', () => {
     const subject = new Subject();
-    const once = jest.fn();
-    const signalBound = jest.fn();
-    const alreadyAborted = jest.fn();
+    const once = vi.fn();
+    const signalBound = vi.fn();
+    const alreadyAborted = vi.fn();
     const controller = new AbortController();
     subject.addEventListener('probe', once, { once: true });
     subject.addEventListener('probe', signalBound, {
@@ -81,8 +82,8 @@ describe('event compatibility', () => {
 
   test('cancellation short circuits default/all dispatch and returns false', () => {
     const subject = new Subject();
-    const fallback = jest.fn();
-    const all = jest.fn();
+    const fallback = vi.fn();
+    const all = vi.fn();
     subject.addEventListener(EventDefault.name, fallback);
     subject.addEventListener(EventAll.name, all);
     subject.addEventListener('probe', (event) => event.preventDefault());
@@ -95,7 +96,7 @@ describe('event compatibility', () => {
 
   test('default and all cancellation propagate their own dispatch results', () => {
     const subject = new Subject();
-    const all = jest.fn();
+    const all = vi.fn();
     subject.addEventListener(EventDefault.name, (event) =>
       event.preventDefault(),
     );

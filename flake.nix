@@ -35,6 +35,29 @@
           src = nixpkgs-matrixai.lib.gitignore.gitignoreSource ./.;
           package = builtins.fromJSON (builtins.readFile ./package.json);
           npmDependencies = import ./nix/npm-deps.nix { inherit pkgs nodejs; };
+          installedDependencies = pkgs.buildNpmPackage {
+            pname = "library-npm-dependencies";
+            version = "0";
+            src = npmDependencies.npmDeps;
+            inherit nodejs;
+            inherit (npmDependencies) npmDeps npmConfigHook;
+            dontNpmBuild = true;
+            dontFixup = true;
+            installPhase = ''
+              mkdir -p "$out"
+              mv node_modules "$out/node_modules"
+            '';
+          };
+          setupDependencies = ''
+            mkdir node_modules
+            find ${installedDependencies}/node_modules -mindepth 1 -maxdepth 1 \
+              -exec ln -s -t node_modules {} +
+            export PATH="$PWD/node_modules/.bin:$PATH"
+          '';
+          libraryBuild = import ./nix/npm-build.nix {
+            inherit pkgs nodejs setupDependencies;
+            gitignore = nixpkgs-matrixai.lib.gitignore;
+          };
           npmPackage = import ./nix/npm-package.nix {
             inherit
               pkgs
@@ -42,11 +65,19 @@
               src
               package
               npmDependencies
+              libraryBuild
               ;
             sourceProvenance = {
               rev = if inputs.self ? dirtyRev then null else inputs.self.rev or null;
               dirtyRev = inputs.self.dirtyRev or null;
               narHash = inputs.self.narHash or null;
+              dirty =
+                if inputs.self ? dirtyRev then
+                  true
+                else if inputs.self ? rev then
+                  false
+                else
+                  null;
             };
           };
         in
@@ -65,6 +96,9 @@
               src
               npmDependencies
               system
+              libraryBuild
+              installedDependencies
+              setupDependencies
               ;
           };
           devShells.ci = config.devShells.default;
@@ -80,6 +114,7 @@
               nodejs
               lint
               pkgs.gnutar
+              pkgs.structured-madr
             ];
             enterShell = ''
               export PATH="${lint}/bin:$PWD/node_modules/.bin:$PATH"

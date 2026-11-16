@@ -137,7 +137,7 @@ the pinned surface.
 npm ci --ignore-scripts
 npm run lintfix
 npm run typecheck
-npm test -- --runInBand
+npm test
 npm run check:package
 npm run check:portable
 npm run check
@@ -148,21 +148,23 @@ with explicit Nix and shell backends. `nix fmt` uses that same lint authority.
 There is no npm lint dependency or separate lint flake input. Lint scripts need
 the development shell's tools; hermetic checks provide their own environment.
 
-Tests build first and use Jest/SWC standard decorators with a 20-second default
-timeout. JUnit is written to `tmp/junit/junit.xml`. Package checks unpack a real
-archive, test ESM root/subpath/metadata consumers, validate declarations, and
-verify the canonical manifest and file allowlist. Static portability checks
-reject non-relative emitted imports. Optional `npm run check:browser` requires
-Firefox on PATH (or `EVENTS_BROWSER` pointing to Firefox) and runs an isolated
-headless import smoke. It is not full browser conformance.
+Tests use Vitest with standard decorators and a 20-second default timeout. Local
+tests build incrementally; hermetic checks use prebuilt output. JUnit is written
+to `tmp/junit/junit.xml`. Package checks unpack a real archive, test ESM
+root/subpath/metadata consumers, validate declarations, and verify the canonical
+manifest and file allowlist. Static portability checks reject non-relative
+emitted imports. Optional `npm run check:browser` requires Firefox on PATH (or
+`EVENTS_BROWSER` pointing to Firefox) and runs an isolated headless import
+smoke. It is not full browser conformance.
 
 ## Hermetic checks and prepared archives
 
-[The flake](flake.nix) exposes independent `verify`, `lint`, and `default`
+[The flake](flake.nix) exposes independent `unit-js`, `lint`, and `default`
 checks on x86_64-linux. They do not depend on direnv, devenv, installed local
 npm packages, or live developer state. Reports and reusable artifacts are in
 each check output. Before Git-backed Nix evaluation, stage exact new input
-files; tracked edits and deletions are already visible.
+files; tracked edits and deletions are already visible. The package and
+portability checks above remain local commands, not part of the default gate.
 
 ```sh
 nix flake check --no-write-lock-file -L

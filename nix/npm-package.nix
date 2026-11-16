@@ -4,6 +4,7 @@
   src,
   package,
   npmDependencies,
+  libraryBuild,
   sourceProvenance,
 }:
 let
@@ -18,10 +19,11 @@ pkgs.buildNpmPackage {
     "unpacked"
   ];
   inherit (npmDependencies) npmDeps npmConfigHook;
-  npmBuildScript = "build";
+  dontNpmBuild = true;
   preBuild = ''
     cmp package.json ${../package.json}
     cmp package-lock.json ${../package-lock.json}
+    cp -R ${libraryBuild}/dist dist
   '';
   installPhase = ''
     runHook preInstall
