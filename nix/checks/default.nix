@@ -10,6 +10,17 @@
   setupDependencies,
 }:
 let
+  runtimeInputs = {
+    inherit
+      pkgs
+      nodejs
+      system
+      src
+      setupDependencies
+      ;
+  };
+  browserBundle = import ./browser/bundle.nix (runtimeInputs // { inherit libraryBuild; });
+  integration-browser = import ./browser (runtimeInputs // { inherit browserBundle; });
   unit-js = import ./unit-js.nix {
     inherit
       pkgs
@@ -31,7 +42,25 @@ let
 in
 {
   inherit unit-js;
+  inherit integration-browser;
   lint = lintCheck;
+  runtime = pkgs.runCommand "events-check-runtime" { } ''
+    mkdir -p "$out/artifacts"
+    ln -s ${integration-browser} "$out/artifacts/integration-browser"
+    cat > "$out/report.json" <<EOF
+    {
+      "schemaVersion": 1,
+      "name": "runtime",
+      "kind": "aggregate",
+      "status": "passed",
+      "system": "${system}",
+      "summary": "Chromium document and dedicated-worker integration passed; not deployed-platform evidence",
+      "artifacts": {
+        "browser": "artifacts/integration-browser/report.json"
+      }
+    }
+    EOF
+  '';
   default = pkgs.runCommand "events-check-default" { } ''
     mkdir -p "$out/artifacts"
     ln -s ${unit-js} "$out/artifacts/unit-js"

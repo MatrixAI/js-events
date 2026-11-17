@@ -1,6 +1,6 @@
 {
   "name": "@matrixai/events",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "author": "Matrix AI",
   "contributors": [
     {
@@ -35,21 +35,17 @@
     "postversion": "npm install --package-lock-only --ignore-scripts --silent",
     "tsx": "tsx",
     "test": "node ./scripts/test.mjs",
-    "typecheck": "tsc -p ./tsconfig.json",
     "lint": "matrixai-lint --check",
-    "lintfix": "matrixai-lint --fix",
-    "check:package": "npm run build && node ./scripts/check-package.mjs",
-    "check:portable": "npm run build && node ./scripts/check-portable.mjs",
-    "check:conformance": "npm run typecheck && npm test && npm run check:package && npm run check:portable",
-    "check": "npm run check:conformance && npm run lint",
-    "check:browser": "npm run build && node ./scripts/check-browser.mjs"
+    "lintfix": "matrixai-lint --fix"
   },
   "devDependencies": {
     "@babel/core": "^7.29.13",
     "@babel/plugin-proposal-decorators": "^7.29.7",
+    "@playwright/test": "1.64.1",
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "5.1.0",
+    "esbuild": "0.28.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
     "vitest": "5.1.0"

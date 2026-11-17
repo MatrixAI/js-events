@@ -67,13 +67,10 @@
 ## Golden commands
 
 - Build: `npm run build`.
-- Types: `npm run typecheck`.
 - Tests: `npm test`.
 - Development formatting: `npm run lintfix` or `nix fmt`.
 - Lint verification: `npm run lint`.
-- Package verification: `npm run check:package`.
-- Portable imports: `npm run check:portable`.
-- Aggregate local checks: `npm run check`.
+- Browser integration: `nix build '.#checks.x86_64-linux.runtime'`.
 - Hermetic checks: `nix flake check`.
 - Documentation and benchmarks: no generated-documentation or benchmark command
   is required for this repository.

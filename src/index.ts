@@ -4,4 +4,5 @@ export { default as EventAll } from './EventAll.js';
 export { default as EventError } from './EventError.js';
 export { Evented } from './Evented.js';
 export * as utils from './utils.js';
-export type * as types from './types.js';
+// eslint-disable-next-line @typescript-eslint/consistent-type-exports -- Preserve the published runtime namespace.
+export * as types from './types.js';

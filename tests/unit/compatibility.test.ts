@@ -12,6 +12,12 @@ interface Subject extends Evented {}
 class Subject {}
 
 describe('event compatibility', () => {
+  test('retains the runtime types namespace export', async () => {
+    const library = await import('#index.js');
+    expect(Reflect.has(library, 'types')).toBe(true);
+    expect(Reflect.get(library, 'types')).toBeTypeOf('object');
+  });
+
   test('standard decorators preserve class identity and constructor arguments', () => {
     interface Named extends Evented {}
     @Evented()

@@ -116,6 +116,12 @@
               pkgs.gnutar
               pkgs.structured-madr
             ];
+            env = {
+              PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+              PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+              PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+              FONTCONFIG_FILE = pkgs.makeFontsConf { fontDirectories = [ pkgs.dejavu_fonts ]; };
+            };
             enterShell = ''
               export PATH="${lint}/bin:$PWD/node_modules/.bin:$PATH"
             '';

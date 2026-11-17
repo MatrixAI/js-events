@@ -95,6 +95,9 @@ thrown up as an uncaught exception.
 
 ## Installation and package boundary
 
+Version 5 declares Node.js 24 as its minimum Node runtime. The event APIs and
+the existing runtime namespace exports remain available.
+
 Require Node.js 24 or newer.
 
 ```sh
@@ -136,11 +139,8 @@ the pinned surface.
 ```sh
 npm ci --ignore-scripts
 npm run lintfix
-npm run typecheck
 npm test
-npm run check:package
-npm run check:portable
-npm run check
+nix build '.#checks.x86_64-linux.runtime'
 ```
 
 MatrixAI lint comes from `pkgs.matrixai-lint` in the selected public producer,
@@ -150,21 +150,20 @@ the development shell's tools; hermetic checks provide their own environment.
 
 Tests use Vitest with standard decorators and a 20-second default timeout. Local
 tests build incrementally; hermetic checks use prebuilt output. JUnit is written
-to `tmp/junit/junit.xml`. Package checks unpack a real archive, test ESM
-root/subpath/metadata consumers, validate declarations, and verify the canonical
-manifest and file allowlist. Static portability checks reject non-relative
-emitted imports. Optional `npm run check:browser` requires Firefox on PATH (or
-`EVENTS_BROWSER` pointing to Firefox) and runs an isolated headless import
-smoke. It is not full browser conformance.
+to `tmp/junit/junit.xml`. The optional static portability scan rejects
+non-relative emitted imports; run `npm run build` followed by
+`node ./scripts/check-portable.mjs`. Browser integration uses Playwright and a
+compiled bundle in Chromium document and dedicated-worker realms. It is not full
+browser or deployed-platform conformance.
 
 ## Hermetic checks and prepared archives
 
-[The flake](flake.nix) exposes independent `unit-js`, `lint`, and `default`
-checks on x86_64-linux. They do not depend on direnv, devenv, installed local
-npm packages, or live developer state. Reports and reusable artifacts are in
-each check output. Before Git-backed Nix evaluation, stage exact new input
-files; tracked edits and deletions are already visible. The package and
-portability checks above remain local commands, not part of the default gate.
+[The flake](flake.nix) exposes independent `unit-js`, `lint`, `default`, and
+`runtime` checks on x86_64-linux. They do not depend on direnv, devenv,
+installed local npm packages, or live developer state. Reports and reusable
+artifacts are in each check output. Before Git-backed Nix evaluation, stage
+exact new input files; tracked edits and deletions are already visible. The
+portability scan above remains a local command, not part of the default gate.
 
 ```sh
 nix flake check --no-write-lock-file -L
